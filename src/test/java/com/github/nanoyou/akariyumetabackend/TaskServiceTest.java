@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -119,23 +120,42 @@ class TaskServiceTest {
     }
 
     @Test
-    void getMyTasks_shouldReturnListOfTasks() {
-        // Arrange
-        String childId = "child123";
-        List<TaskRecord> taskRecords = new ArrayList<>();
-        taskRecords.add(new TaskRecord());
-        taskRecords.add(new TaskRecord());
-        when(taskRecordDao.findByTaskRecordCombinedPrimaryKeyChildID(childId)).thenReturn(taskRecords);
-        when(taskDao.findById(anyString())).thenReturn(Optional.of(new Task()));
+    void testGetMyTasks() {
+        // 创建测试数据
+        String childID = "123";
 
-        // Act
-        List<Task> result = taskService.getMyTasks(childId);
+        // 创建模拟的taskRecords和tasks列表
+        List<TaskRecord> taskRecords = Arrays.asList(
+                new TaskRecord(new TaskRecord._TaskRecordCombinedPrimaryKey("task1", childID), TaskRecordStatus.COMPLETED),
+                new TaskRecord(new TaskRecord._TaskRecordCombinedPrimaryKey("task2", childID), TaskRecordStatus.IN_PROGRESS)
+        );
 
-        // Assert
-        assertEquals(taskRecords.size(), result.size());
-        verify(taskRecordDao, times(1)).findByTaskRecordCombinedPrimaryKeyChildID(childId);
-        verify(taskDao, times(taskRecords.size())).findById(anyString());
+        List<Task> tasks = Arrays.asList(
+                new Task("task1", "Task 1", "uploader1", LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), TaskStatus.ACTIVE, "Description 1", "Category 1", 100),
+                new Task("task2", "Task 2", "uploader2", LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), TaskStatus.ACTIVE, "Description 2", "Category 2", 200)
+        );
+
+        // 模拟taskRecordDao的findByTaskRecordCombinedPrimaryKeyChildID()方法返回taskRecords
+        when(taskRecordDao.findByTaskRecordCombinedPrimaryKeyChildID(childID)).thenReturn(taskRecords);
+
+        // 模拟taskDao的findById()方法根据taskID返回对应的task对象
+        when(taskDao.findById("task1")).thenReturn(Optional.of(tasks.get(0)));
+        when(taskDao.findById("task2")).thenReturn(Optional.of(tasks.get(1)));
+
+        // 调用getMyTasks()方法
+        List<Task> result = taskService.getMyTasks(childID);
+
+        // 验证返回的任务列表是否符合预期
+        assertEquals(tasks, result);
+
+        // 验证taskRecordDao的findByTaskRecordCombinedPrimaryKeyChildID()方法是否被调用一次，并且传入了正确的参数
+        verify(taskRecordDao, times(1)).findByTaskRecordCombinedPrimaryKeyChildID(childID);
+
+        // 验证taskDao的findById()方法是否被调用两次，并且传入了正确的参数
+        verify(taskDao, times(1)).findById("task1");
+        verify(taskDao, times(1)).findById("task2");
     }
+
 
     @Test
     void addTaskDynamic_shouldSaveTaskDynamicAndReturnOptionalTaskDynamic() {
@@ -153,21 +173,50 @@ class TaskServiceTest {
     }
 
     @Test
-    void getTaskDynamicIdList_shouldReturnListOfDynamicIds() {
-        // Arrange
-        String taskId = "1";
-        List<TaskDynamic> taskDynamics = new ArrayList<>();
-        taskDynamics.add(new TaskDynamic());
-        taskDynamics.add(new TaskDynamic());
-        when(taskDynamicDao.findByTaskDynamicTaskID(taskId)).thenReturn(taskDynamics);
+    void testGetTaskDynamicIdList() {
+        // 创建测试数据
+        String taskID = "123";
 
-        // Act
-        List<String> result = taskService.getTaskDynamicIdList(taskId);
+        // 创建模拟的taskDynamicList和dynamicIDList
+        List<TaskDynamic> taskDynamicList = Arrays.asList(
+                TaskDynamic.builder()
+                        .taskDynamic(TaskDynamic._TaskDynamicCombinedPrimaryKey.builder()
+                                .taskID(taskID)
+                                .dynamicID("1")
+                                .build())
+                        .build(),
+                TaskDynamic.builder()
+                        .taskDynamic(TaskDynamic._TaskDynamicCombinedPrimaryKey.builder()
+                                .taskID(taskID)
+                                .dynamicID("2")
+                                .build())
+                        .build(),
+                TaskDynamic.builder()
+                        .taskDynamic(TaskDynamic._TaskDynamicCombinedPrimaryKey.builder()
+                                .taskID(taskID)
+                                .dynamicID("3")
+                                .build())
+                        .build()
+        );
 
-        // Assert
-        assertEquals(taskDynamics.size(), result.size());
-        verify(taskDynamicDao, times(1)).findByTaskDynamicTaskID(taskId);
+        List<String> dynamicIDList = taskDynamicList.stream()
+                .map(taskDynamic -> taskDynamic.getTaskDynamic().getDynamicID())
+                .collect(Collectors.toList());
+
+        // 模拟taskDynamicDao的findByTaskDynamicTaskID()方法返回taskDynamicList
+        when(taskDynamicDao.findByTaskDynamicTaskID(taskID)).thenReturn(taskDynamicList);
+
+        // 调用getTaskDynamicIdList()方法
+        List<String> result = taskService.getTaskDynamicIdList(taskID);
+
+        // 验证返回的dynamicIDList是否符合预期
+        assertEquals(dynamicIDList, result);
+
+        // 验证taskDynamicDao的findByTaskDynamicTaskID()方法是否被调用一次，并且传入了正确的参数
+        verify(taskDynamicDao, times(1)).findByTaskDynamicTaskID(taskID);
     }
+
+
 
     @Test
     void getRecord_shouldReturnOptionalTaskRecord() {
