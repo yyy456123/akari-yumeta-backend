@@ -14,12 +14,17 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskCategory.ANIMAL_HUSBANDRY;
+import static com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskCategory.SCIENCE;
+import static com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskStatus.FINISHED;
+import static com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskStatus.IN_PROGRESS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
@@ -126,13 +131,19 @@ class TaskServiceTest {
 
         // 创建模拟的taskRecords和tasks列表
         List<TaskRecord> taskRecords = Arrays.asList(
-                new TaskRecord(new TaskRecord._TaskRecordCombinedPrimaryKey("task1", childID), TaskRecordStatus.COMPLETED),
-                new TaskRecord(new TaskRecord._TaskRecordCombinedPrimaryKey("task2", childID), TaskRecordStatus.IN_PROGRESS)
+                TaskRecord.builder()
+                        .taskRecordCombinedPrimaryKey(new TaskRecord._TaskRecordCombinedPrimaryKey("task1", childID))
+                        .status(TaskRecordStatus.COMPLETED)
+                        .build(),
+                TaskRecord.builder()
+                        .taskRecordCombinedPrimaryKey(new TaskRecord._TaskRecordCombinedPrimaryKey("task2", childID))
+                        .status(TaskRecordStatus.UNCOMPLETED)
+                        .build()
         );
 
         List<Task> tasks = Arrays.asList(
-                new Task("task1", "Task 1", "uploader1", LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), TaskStatus.ACTIVE, "Description 1", "Category 1", 100),
-                new Task("task2", "Task 2", "uploader2", LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), TaskStatus.ACTIVE, "Description 2", "Category 2", 200)
+                new Task("task1", "Task 1", "uploader1", LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), IN_PROGRESS, "Description 1", ANIMAL_HUSBANDRY, 100),
+                new Task("task2", "Task 2", "uploader2", LocalDateTime.now(), LocalDateTime.now(), LocalDateTime.now(), FINISHED, "Description 2", SCIENCE, 200)
         );
 
         // 模拟taskRecordDao的findByTaskRecordCombinedPrimaryKeyChildID()方法返回taskRecords
@@ -155,6 +166,7 @@ class TaskServiceTest {
         verify(taskDao, times(1)).findById("task1");
         verify(taskDao, times(1)).findById("task2");
     }
+
 
 
     @Test
