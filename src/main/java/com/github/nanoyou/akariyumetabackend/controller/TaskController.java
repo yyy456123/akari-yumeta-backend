@@ -1,18 +1,18 @@
 package com.github.nanoyou.akariyumetabackend.controller;
 
-import com.github.nanoyou.akariyumetabackend.common.constant.SessionConst;
 import com.github.nanoyou.akariyumetabackend.common.enumeration.ResponseCode;
 import com.github.nanoyou.akariyumetabackend.common.exception.NoSuchCourseException;
-import com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskRecordStatus;
-import com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskStatus;
 import com.github.nanoyou.akariyumetabackend.dto.task.TaskCourseDTO;
 import com.github.nanoyou.akariyumetabackend.dto.task.TaskCourseUploadDTO;
 import com.github.nanoyou.akariyumetabackend.dto.task.TaskDTO;
 import com.github.nanoyou.akariyumetabackend.dto.task.TaskRecordDTO;
 import com.github.nanoyou.akariyumetabackend.entity.Result;
+import com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskRecordStatus;
+import com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskStatus;
 import com.github.nanoyou.akariyumetabackend.entity.task.Course;
 import com.github.nanoyou.akariyumetabackend.entity.task.Task;
 import com.github.nanoyou.akariyumetabackend.entity.task.TaskRecord;
+import com.github.nanoyou.akariyumetabackend.entity.user.User;
 import com.github.nanoyou.akariyumetabackend.service.CourseService;
 import com.github.nanoyou.akariyumetabackend.service.TaskService;
 import jakarta.annotation.Nonnull;
@@ -47,7 +47,7 @@ public class TaskController {
      * @return Result类型的对象
      */
     @RequestMapping(path = "/task", method = RequestMethod.POST, headers = "Accept=application/json")
-    public Result task(@RequestBody TaskCourseUploadDTO taskCourseUploadDTO) {
+    public Result task(@RequestBody TaskCourseUploadDTO taskCourseUploadDTO, @RequestAttribute("user") User loginUser) {
         try {
             // 验证时间,设置状态
             LocalDateTime time = now();
@@ -72,7 +72,7 @@ public class TaskController {
 
             var uploadTask = Task.builder()
                     .taskName(taskCourseUploadDTO.getTaskName())
-                    .taskUploaderID(taskCourseUploadDTO.getTaskUploaderID())
+                    .taskUploaderID(loginUser.getId())
                     .createdTime(time)
                     .startTime(taskCourseUploadDTO.getStartTime())
                     .endTime(taskCourseUploadDTO.getEndTime())
@@ -101,7 +101,7 @@ public class TaskController {
             // course同步task UUID
             //TODO：COURSE观看次数&视频时长
             Integer watchedCount = 0;
-            Integer videoDuration = 0;
+            Integer videoDuration = 1;
             var uploadCourse = Course.builder()
                     .taskID(taskDTO.getId())
                     .watchedCount(watchedCount)
@@ -163,25 +163,20 @@ public class TaskController {
                     .data(taskCourseDTO)
                     .build();
         } catch (NullPointerException e) {
-            return Result.builder()
-                    .ok(false)
-                    .code(ResponseCode.NO_SUCH_TASK_COURSE.value)
-                    .message("课程任务不存在")
-                    .data(null)
-                    .build();
+            return Result.failed("课程任务不存在", ResponseCode.NO_SUCH_TASK_COURSE);
         }
     }
 
     /**
      * 获取当前用户的课程任务列表
      *
-     * @param loginUserID HTTP会话对象，用于获取登录用户信息
+     * @param user HTTP会话对象，用于获取登录用户信息
      * @return 返回Result对象，包含查询结果信息
      */
     @RequestMapping(path = "/my/task", method = RequestMethod.GET, headers = "Accept=application/json")
-    public Result myTask(@ModelAttribute(SessionConst.LOGIN_USER_ID) String loginUserID) {
+    public Result myTask(@RequestAttribute("user") User user) {
         try {
-
+            val loginUserID = user.getId();
             val tasks = taskService.getMyTasks(loginUserID);
 
             val courses = tasks.stream().map(
@@ -259,20 +254,20 @@ public class TaskController {
     /**
      * 开启学习任务
      *
-     * @param taskID      任务 ID
-     * @param loginUserID 自动注入的登录用户 ID
+     * @param taskID 任务 ID
+     * @param user   自动注入的登录用户
      * @return Result
      */
     @RequestMapping(path = "/task/{taskID}/open", method = RequestMethod.POST, headers = "Accept=application/json")
-    public Result record(@PathVariable String taskID, @ModelAttribute(SessionConst.LOGIN_USER_ID) String loginUserID) {
+    public Result record(@PathVariable String taskID, @RequestAttribute("user") User user) {
         try {
-
+            val loginUserID = user.getId();
             var comID = TaskRecord._TaskRecordCombinedPrimaryKey.builder()
                     .taskID(taskID)
                     .childID(loginUserID)
                     .build();
 
-            if(taskService.validateMyTask(comID)){
+            if (taskService.validateMyTask(comID)) {
                 return Result.builder()
                         .ok(true)
                         .code(ResponseCode.TASK_OPEN_AGAIN.value)
@@ -322,13 +317,14 @@ public class TaskController {
      * 完成学习任务（视频观看修改状态）
      *
      * @param taskID      任务 ID
-     * @param loginUserID 自动注入的登录用户 ID
+     * @param user 自动注入的登录用户
      * @return Result
      */
     @RequestMapping(path = "/task/{taskID}/finish", method = RequestMethod.POST, headers = "Accept=application/json")
-    public Result finish(@PathVariable String taskID, @ModelAttribute(SessionConst.LOGIN_USER_ID) String loginUserID) {
+    public Result finish(@PathVariable String taskID, @RequestAttribute("user") User user) {
         try {
             val course = courseService.getCourse(taskID).orElseThrow(NullPointerException::new);
+            val loginUserID = user.getId();
 
             var comID = TaskRecord._TaskRecordCombinedPrimaryKey.builder()
                     .taskID(taskID)

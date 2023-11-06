@@ -2,10 +2,12 @@ package com.github.nanoyou.akariyumetabackend.entity.task;
 
 import com.github.nanoyou.akariyumetabackend.entity.enumeration.TaskRecordStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.validator.constraints.UUID;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -33,11 +35,13 @@ public class TaskRecord {
      * 任务开启时间
      * 受困儿童点开这个任务的时间
      */
+    @NotNull
     private LocalDateTime startTime;
     /**
      * 任务状态，详见枚举
      */
     @Enumerated(EnumType.STRING)
+    @NotNull
     private TaskRecordStatus status;
 
     @Embeddable
@@ -49,10 +53,14 @@ public class TaskRecord {
         /**
          * 关联的Task的ID
          */
+        @NotNull
+        @UUID
         private String taskID;
         /**
          * 受困儿童的ID
          */
+        @NotNull
+        @UUID
         private String childID;
     }
 }

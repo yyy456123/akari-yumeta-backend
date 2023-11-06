@@ -15,7 +15,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -56,6 +58,9 @@ public class UserService {
 
     }
 
+    public boolean userExists(@Nonnull String userID) {
+        return userDao.existsById(userID);
+    }
 
     public List<User> getAllUsers() {
         return userDao.findAll();
@@ -113,6 +118,65 @@ public class UserService {
                         .tags(tagService.getTags(user.getId()).getTagContentList())
                         .build()
         );
+    }
+
+    public Optional<UserDTO> info(@Nonnull User user, @Nonnull TagDTO tagDTO) {
+        userDao.saveAndFlush(user);
+
+        //tags更新
+        val tagList = tagDTO.getTagContentList();
+        TagDTO tagDTO1 = null;
+        if ((tagList != null) && (!(tagList.isEmpty()))) {
+            tagDTO1 = tagService.addTags(user.getId(), tagDTO.getTagContentList());
+        }
+
+        return Optional.of(UserDTO.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .nickname(user.getNickname())
+                        .role(user.getRole())
+                        .gender(user.getGender())
+                        .introduction(user.getIntroduction())
+                        .avatarURL(user.getAvatarURL())
+                        .usageDuration(user.getUsageDuration())
+                        .tags(tagDTO1 == null ? new ArrayList<>() : tagDTO1.getTagContentList())
+                .build());
+    }
+
+    public  List<UserDTO> getFollowee(@Nonnull List<String> followeeIDs){
+        val followees =  followeeIDs.stream().map(
+                followeeID -> userDao.findById(followeeID).orElseThrow(NullPointerException::new)
+        ).toList();
+
+        val tags = followeeIDs.stream().map(
+                tagService::getTags
+        ).toList();
+
+
+        Map<String, List<String>> tagMap = tags.stream()
+                .collect(Collectors.toMap(TagDTO::getUserID, TagDTO::getTagContentList));
+
+        return followees.stream().map(
+                user -> {
+                    UserDTO userDTO = UserDTO.builder()
+                    .id(user.getId())
+                    .username(user.getUsername())
+                    .nickname(user.getNickname())
+                    .role(user.getRole())
+                    .gender(user.getGender())
+                    .introduction(user.getIntroduction())
+                    .avatarURL(user.getAvatarURL())
+                    .usageDuration(user.getUsageDuration())
+                    .build();
+
+                    List<String> userTags = tagMap.get(user.getId());
+                    if (userTags != null) {
+                        userDTO.setTags(userTags);
+                    }
+                    return userDTO;
+        }).toList();
 
     }
+
+
 }
