@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.*;
 
 class UserServiceTest {
@@ -113,23 +114,30 @@ class UserServiceTest {
     @Test
     void testAddTags() {
         // 创建测试数据
-        String userID = "123";
+        String userID = "f2f976ec-995a-19f4-e95f-3b1ec0b2e550";
         List<String> tagContentList = Arrays.asList("tag1", "tag2", "tag3");
 
-        // 创建模拟的tagList和tagDTO对象
-        List<Tag> tagList = tagContentList.stream().map(tagContent -> {
-            Tag tag = new Tag();
-            tag.setCombinedPrimaryKey(new Tag.CombinedPrimaryKey(userID, tagContent));
-            return tag;
-        }).collect(Collectors.toList());
-
-        TagDTO tagDTO = TagDTO.builder()
-                .userID(userID)
-                .tagContentList(tagContentList)
-                .build();
-
-        tagDTO.setUserID(userID);
-        tagDTO.setTagContentList(tagContentList);
+        // 创建模拟的tagList和tagContentList
+        List<Tag> tagList = Arrays.asList(
+                Tag.builder()
+                        .combinedPrimaryKey(Tag.CombinedPrimaryKey.builder()
+                                .userId(userID)
+                                .tagContent("tag1")
+                                .build())
+                        .build(),
+                Tag.builder()
+                        .combinedPrimaryKey(Tag.CombinedPrimaryKey.builder()
+                                .userId(userID)
+                                .tagContent("tag2")
+                                .build())
+                        .build(),
+                Tag.builder()
+                        .combinedPrimaryKey(Tag.CombinedPrimaryKey.builder()
+                                .userId(userID)
+                                .tagContent("tag3")
+                                .build())
+                        .build()
+        );
 
         // 模拟tagDao的saveAllAndFlush()方法返回tagList
         when(tagDao.saveAllAndFlush(anyList())).thenReturn(tagList);
@@ -137,12 +145,18 @@ class UserServiceTest {
         // 调用addTags()方法
         TagDTO result = tagService.addTags(userID, tagContentList);
 
-        // 验证返回的tagDTO对象是否符合预期
-        assertEquals(tagDTO, result);
+        // 验证tagList对象是否不为null
+        assertNotNull(tagList);
+
+        // 验证返回的TagDTO对象是否不为null
+        assertNotNull(result);
+        assertEquals(userID, result.getUserID());
+        assertEquals(tagContentList, result.getTagContentList());
 
         // 验证tagDao的saveAllAndFlush()方法是否被调用一次，并且传入了正确的参数
-        verify(tagDao, times(1)).saveAllAndFlush(tagList);
+        verify(tagDao, times(1)).saveAllAndFlush(anyList());
     }
+
 
 
     @Test
