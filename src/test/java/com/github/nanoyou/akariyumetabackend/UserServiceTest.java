@@ -1,9 +1,11 @@
 package com.github.nanoyou.akariyumetabackend;
 
+import com.github.nanoyou.akariyumetabackend.dao.TagDao;
 import com.github.nanoyou.akariyumetabackend.dao.UserDao;
 import com.github.nanoyou.akariyumetabackend.dto.user.LoginDTO;
 import com.github.nanoyou.akariyumetabackend.dto.user.RegisterDTO;
 import com.github.nanoyou.akariyumetabackend.dto.user.UserDTO;
+import com.github.nanoyou.akariyumetabackend.entity.user.Tag;
 import com.github.nanoyou.akariyumetabackend.entity.user.User;
 import com.github.nanoyou.akariyumetabackend.dto.TagDTO;
 import com.github.nanoyou.akariyumetabackend.service.TagService;
@@ -11,12 +13,15 @@ import com.github.nanoyou.akariyumetabackend.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
@@ -31,6 +36,11 @@ class UserServiceTest {
 
     @Mock
     private UserService userService;
+
+    // 创建模拟的tagDao对象
+    TagDao tagDao = Mockito.mock(TagDao.class);
+
+
 
     @BeforeEach
     void setUp() {
@@ -101,37 +111,39 @@ class UserServiceTest {
     }
 
     @Test
-    void testRegister() {
-        RegisterDTO registerDTO = new RegisterDTO();
-        registerDTO.setUsername("testuser");
-        registerDTO.setNickname("Test User");
-        // Set other properties of the registerDTO object
+    void testAddTags() {
+        // 创建测试数据
+        String userID = "123";
+        List<String> tagContentList = Arrays.asList("tag1", "tag2", "tag3");
 
-        User user = new User();
-        user.setId("123");
-        user.setUsername("testuser");
-        user.setNickname("Test User");
-        // Set other properties of the user object
+        // 创建模拟的tagList和tagDTO对象
+        List<Tag> tagList = tagContentList.stream().map(tagContent -> {
+            Tag tag = new Tag();
+            tag.setCombinedPrimaryKey(new Tag.CombinedPrimaryKey(userID, tagContent));
+            return tag;
+        }).collect(Collectors.toList());
 
-        TagDTO tagDTO = TagDTO.builder().build();
-        tagDTO.setTagContentList(new ArrayList<>());
-        when(userDao.saveAndFlush(any(User.class))).thenReturn(user);
-        when(tagService.addTags(eq("123"), anyList())).thenReturn(tagDTO);
-
-        UserDTO result = userService.register(registerDTO);
-
-        UserDTO expectedDTO = UserDTO.builder()
-                .id("123")
-                .username("testuser")
-                .nickname("Test User")
-                // Set other properties of the expectedDTO object
-                .tags(new ArrayList<>())
+        TagDTO tagDTO = TagDTO.builder()
+                .userID(userID)
+                .tagContentList(tagContentList)
                 .build();
 
-        assertEquals(expectedDTO, result);
-        verify(userDao, times(1)).saveAndFlush(any(User.class));
-        verify(tagService, times(1)).addTags(eq("123"), anyList());
+        tagDTO.setUserID(userID);
+        tagDTO.setTagContentList(tagContentList);
+
+        // 模拟tagDao的saveAllAndFlush()方法返回tagList
+        when(tagDao.saveAllAndFlush(anyList())).thenReturn(tagList);
+
+        // 调用addTags()方法
+        TagDTO result = tagService.addTags(userID, tagContentList);
+
+        // 验证返回的tagDTO对象是否符合预期
+        assertEquals(tagDTO, result);
+
+        // 验证tagDao的saveAllAndFlush()方法是否被调用一次，并且传入了正确的参数
+        verify(tagDao, times(1)).saveAllAndFlush(tagList);
     }
+
 
     @Test
     void testLogin() {
