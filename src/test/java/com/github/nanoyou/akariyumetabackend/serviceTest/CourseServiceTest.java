@@ -1,4 +1,4 @@
-package com.github.nanoyou.akariyumetabackend;
+package com.github.nanoyou.akariyumetabackend.serviceTest;
 
 import com.github.nanoyou.akariyumetabackend.entity.task.Course;
 import com.github.nanoyou.akariyumetabackend.service.CourseService;

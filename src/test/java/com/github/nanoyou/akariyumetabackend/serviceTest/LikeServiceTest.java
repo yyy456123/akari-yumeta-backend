@@ -1,4 +1,4 @@
-package com.github.nanoyou.akariyumetabackend;
+package com.github.nanoyou.akariyumetabackend.serviceTest;
 
 import com.github.nanoyou.akariyumetabackend.dao.LikeDao;
 import com.github.nanoyou.akariyumetabackend.entity.dynamic.Like;
